@@ -38,15 +38,4 @@ class GatewayController {
             'data' => $response->getData()
         ]);
     }
-
-    public function inquiry(GatewayRequest $request) {
-        $service = $this->getService($request->gateway);
-        $request->validate($service->getInquiryRules());
-        $response = $service->inquiry($request->id);
-        return response([
-            'success' => $response->getSuccess(),
-            'message' => $response->getMessage(),
-            'data' => $response->getData()
-        ], $response->getStatus());
-    }
 }

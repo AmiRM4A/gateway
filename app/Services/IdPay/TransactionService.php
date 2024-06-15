@@ -87,29 +87,6 @@ class TransactionService {
         return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::status(TransactionStatus::PAYMENT_NOT_CONFIRMED));
     }
 
-    public static function inquiry($transactionId, $orderId): TransactionResponse {
-        $transaction = Transaction::whereTransactionId($transactionId)->first();
-        if (!$transaction || $transaction->order_id !== $orderId) {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::INQUIRY_NOT_DONE);
-        }
-
-        $response = static::post(static::getEndpoint('payment/inquiry'), [
-            'id' => $transactionId,
-            'order_id' => $orderId
-        ]);
-
-
-        $statusCode = $response->status();
-        $errorCode = $response->json('error_code');
-        $data = $response->json();
-
-        if ($statusCode === Response::HTTP_OK && !$errorCode) {
-            return TransactionResponse::successful(Response::HTTP_OK, TransactionStatus::status(TransactionStatus::INQUIRY_DONE), $data);
-        }
-
-        return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::INQUIRY_NOT_DONE);
-    }
-
     public function getTransactionRules(): array {
         return [
             'name' => ['string'],
