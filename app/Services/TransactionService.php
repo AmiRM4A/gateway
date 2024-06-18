@@ -19,7 +19,7 @@ abstract class TransactionService implements TransactionServiceInterface {
         return 'وضعیت نامشخص';
     }
     protected function getStatus(int $code): ?string {
-        return array_merge($this->getSuccessStatus(), $this->getFailureStatus(), $this->status())[$code] ?: $this->getDefaultStatus();
+        return ($this->status() + $this->getFailureStatus() + $this->getSuccessStatus())[$code] ?: $this->getDefaultStatus();
     }
     abstract protected function status(): array;
     abstract protected function getTransactionRules(): array;
