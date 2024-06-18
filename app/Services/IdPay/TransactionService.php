@@ -2,12 +2,13 @@
 
 namespace App\Services\IdPay;
 
+use App\Services\TransactionService as BaseTransactionService;
 use App\Models\Transaction;
 use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
 
-class TransactionService {
+class TransactionService extends BaseTransactionService {
     protected const API_KEY       = '6a7f99eb-7c20-4412-a972-6dfb7cd253a4';
     protected const BASE_API_URL  = 'https://api.idpay.ir/v1.1';
     protected const CALL_BACK_URL = 'http://127.0.0.1:8000/api/verify';
@@ -45,24 +46,24 @@ class TransactionService {
                 'is_verified' => '0'
             ]);
 
-            return TransactionResponse::successful(Response::HTTP_CREATED, TransactionStatus::status(Response::HTTP_CREATED), $data);
+            return TransactionResponse::successful(Response::HTTP_CREATED, $this->getStatus(201), $data);
         }
 
-        return TransactionResponse::failure($response->status(), TransactionStatus::status($response->status()), $data);
+        return TransactionResponse::failure($response->status(), $this->getStatus(-1), $data);
     }
 
     public static function verify($transactionId, $orderId): TransactionResponse {
         if (request()?->status() || request()?->status() !== '100') {
-            return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, TransactionStatus::PAYMENT_NOT_CONFIRMED);
+            return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, $this->getStatus(102));
         }
 
         if (Transaction::isVerified($transactionId)) {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::PAYMENT_NOT_CONFIRMED);
+            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
         }
 
         $transaction = Transaction::whereTransactionId($transactionId)->first();
         if (!$transaction || $transaction->order_id !== $orderId) {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::status(TransactionStatus::PAYMENT_NOT_CONFIRMED));
+            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
         }
 
         $response = static::post(static::getEndpoint('payment/verify'), [
@@ -76,15 +77,15 @@ class TransactionService {
 
         if ($statusCode === Response::HTTP_OK && !$errorCode) {
             if ($data['payment']['amount'] !== $transaction->transaction_amount) {
-                return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::status(TransactionStatus::PAYMENT_NOT_CONFIRMED));
+                return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
             }
 
             $transaction->is_verified = 1;
             $transaction->update();
-            return TransactionResponse::successful(Response::HTTP_OK, TransactionStatus::status(TransactionStatus::PAYMENT_CONFIRMED), $data);
+            return TransactionResponse::successful(Response::HTTP_OK, $this->getStatus(102), $data);
         }
 
-        return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, TransactionStatus::status(TransactionStatus::PAYMENT_NOT_CONFIRMED));
+        return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
     }
 
     public function getTransactionRules(): array {
@@ -103,8 +104,24 @@ class TransactionService {
     }
 
     public function getInquiryRules() {
+    protected function status(): array {
         return [
-            'id' => ['required', 'string']
+            1 => 'پرداخت انجام نشده است',
+            2 => 'پرداخت ناموفق بوده است',
+            3 => 'خطا رخ داده است',
+            4 => 'بلوکه شده',
+            5 => 'برگشت به پرداخت کننده',
+            6 => 'برگشت خورده سیستمی',
+            7 => 'انصراف از پرداخت',
+            8 => 'به درگاه پرداخت منتقل شد',
+            10 => 'در انتظار تایید پرداخت',
+            100 => 'پرداخت تایید شده است',
+            101 => 'پرداخت قبلا تایید شده است',
+            102 => 'پرداخت تایید نشد', // Custom
+            103 => 'استعلام انجام نشد', // Custom
+            200 => 'به دریافت کننده واریز شد',
+            201 => 'تراکنش با موفقیت ایجاد شد', // Custom
+            202 => 'استعلام با موفقیت انجام شد', // Custom
         ];
     }
 }
