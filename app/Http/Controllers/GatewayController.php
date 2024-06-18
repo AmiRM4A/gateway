@@ -36,6 +36,6 @@ class GatewayController {
             'success' => $response->getSuccess(),
             'message' => $response->getMessage(),
             'data' => $response->getData()
-        ]);
+        ], $response->getStatus());
     }
 }

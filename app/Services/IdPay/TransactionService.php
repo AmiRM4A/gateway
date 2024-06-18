@@ -2,23 +2,46 @@
 
 namespace App\Services\IdPay;
 
+use Exception;
+use Illuminate\Http\Client\ConnectionException;
 use App\Services\TransactionService as BaseTransactionService;
 use App\Models\Transaction;
 use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * TransactionService handles the interactions with the IDPay payment gateway.
+ */
 class TransactionService extends BaseTransactionService {
     protected const API_KEY       = '6a7f99eb-7c20-4412-a972-6dfb7cd253a4';
     protected const BASE_API_URL  = 'https://api.idpay.ir/v1.1';
     protected const CALL_BACK_URL = 'http://127.0.0.1:8000/api/verify';
     protected const SANDBOX_URL   = '';
 
-    protected static function getEndpoint(string $method, bool $sand_box = false): string {
+    /**
+     * Get the full API endpoint URL for a specific method.
+     *
+     * @param string $method The API method to call.
+     * @param bool $sand_box Whether to use the sandbox environment.
+     *
+     * @return string The full API endpoint URL.
+     */
+    protected function getEndpoint(string $method, bool $sand_box = false): string {
         return $sand_box ? static::SANDBOX_URL : static::BASE_API_URL . '/' . trim($method, '/');
     }
 
-    public static function post(string $url, array $data = [], ?array $headers = null) {
+    /**
+     * Make a POST request to the specified URL with the given data and headers.
+     *
+     * @param string $url The URL to send the POST request to.
+     * @param array $data The data to include in the POST request.
+     * @param array|null $headers Optional headers to include in the request.
+     *
+     * @throws ConnectionException Throws an ConnectionException on connection errors.
+     * @return \Illuminate\Http\Client\Response The response from the POST request.
+     */
+    protected function post(string $url, array $data = [], ?array $headers = null): \Illuminate\Http\Client\Response {
         return HTTP::withHeaders($headers ?? [
             'X-API-KEY' => self::API_KEY,
             'X-SANDBOX' => 1,
@@ -26,12 +49,24 @@ class TransactionService extends BaseTransactionService {
         ])->post($url, $data);
     }
 
-    public static function transaction($orderId, $amount): TransactionResponse {
-        $response = static::post(static::getEndpoint('payment'), [
-            'order_id' => $orderId,
-            'amount' => $amount,
-            'callback' => static::CALL_BACK_URL
-        ]);
+    /**
+     * Create a new transaction with the given order ID and amount.
+     *
+     * @param string $orderId The order ID.
+     * @param int $amount The transaction amount.
+     *
+     * @return TransactionResponse The response from the transaction creation.
+     */
+    public function transaction($orderId, $amount): TransactionResponse {
+        try {
+            $response = $this->post($this->getEndpoint('payment'), [
+                'order_id' => $orderId,
+                'amount' => $amount,
+                'callback' => static::CALL_BACK_URL
+            ]);
+        } catch (Exception) {
+            return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
+        }
 
         $statusCode = $response->status();
         $data = $response->json();
@@ -52,7 +87,15 @@ class TransactionService extends BaseTransactionService {
         return TransactionResponse::failure($response->status(), $this->getStatus(-1), $data);
     }
 
-    public static function verify($transactionId, $orderId): TransactionResponse {
+    /**
+     * Verify a transaction with the given transaction ID and order ID.
+     *
+     * @param string $transactionId The transaction ID.
+     * @param string $orderId The order ID.
+     *
+     * @return TransactionResponse The response from the verification process.
+     */
+    public function verify($transactionId, $orderId): TransactionResponse {
         if (request()?->status() || request()?->status() !== '100') {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, $this->getStatus(102));
         }
@@ -66,10 +109,14 @@ class TransactionService extends BaseTransactionService {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
         }
 
-        $response = static::post(static::getEndpoint('payment/verify'), [
-            'id' => $transactionId,
-            'order_id' => $orderId
-        ]);
+        try {
+            $response = $this->post($this->getEndpoint('payment/verify'), [
+                'id' => $transactionId,
+                'order_id' => $orderId
+            ]);
+        } catch (Exception) {
+            return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
+        }
 
         $statusCode = $response->status();
         $data = $response->json();
@@ -88,6 +135,11 @@ class TransactionService extends BaseTransactionService {
         return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
     }
 
+    /**
+     * Get the validation rules for creating a transaction.
+     *
+     * @return array The validation rules.
+     */
     public function getTransactionRules(): array {
         return [
             'name' => ['string'],
@@ -97,13 +149,22 @@ class TransactionService extends BaseTransactionService {
         ];
     }
 
-    public function getVerifyRules() {
+    /**
+     * Get the validation rules for verifying a transaction.
+     *
+     * @return array The validation rules.
+     */
+    public function getVerifyRules(): array {
         return [
             'id' => ['required', 'string']
         ];
     }
 
-    public function getInquiryRules() {
+    /**
+     * Get the status messages for different transaction states.
+     *
+     * @return array The status messages.
+     */
     protected function status(): array {
         return [
             1 => 'پرداخت انجام نشده است',
