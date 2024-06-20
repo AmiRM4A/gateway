@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,6 +18,7 @@ class TransactionFactory extends Factory
     public function definition(): array
     {
         return [
+            'unique_id' => Transaction::generateUniqueId(),
             'order_id' => $this->faker->uuid,
             'transaction_id' => $this->faker->uuid,
             'amount' => $this->faker->randomFloat(2, 1, 1000), // Random float between 1 and 1000 with 2 decimal points

@@ -31,7 +31,7 @@ class GatewayController {
     public function verify(GatewayRequest $request) {
         $service = $this->getService($request->gateway);
         $request->validate($service->getVerifyRules());
-        $response = $service->verify($request->id, $request->order_id);
+        $response = $service->verify($request->unique_id);
         return response([
             'success' => $response->getSuccess(),
             'message' => $response->getMessage(),

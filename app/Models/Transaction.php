@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,10 +15,15 @@ class Transaction extends Model
         'transaction_id',
         'amount',
         'link',
-        'is_verified'
+        'is_verified',
+        'unique_id'
     ];
 
-    public static function isVerified($transactionId): bool {
-        return static::where('is_verified', 1)->exists($transactionId);
+    public static function isVerified($uniqueId): bool {
+        return static::where('is_verified', 1)->exists($uniqueId);
+    }
+
+    public static function generateUniqueId(): string {
+        return Str::random(32) . md5(time());
     }
 }

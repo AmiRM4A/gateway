@@ -58,13 +58,14 @@ class TransactionService extends BaseTransactionService {
      * @return TransactionResponse The response from the transaction creation.
      */
     public function transaction($orderId, $amount): TransactionResponse {
+        $key = Transaction::generateUniqueId();
         try {
             $response = $this->post($this->getEndpoint('payment'), [
                 'order_id' => $orderId,
                 'amount' => $amount,
-                'callback' => static::CALL_BACK_URL
+                'callback' => static::CALL_BACK_URL . '/' . $key
             ]);
-        } catch (Exception) {
+        } catch (\Throwable) {
             return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
         }
 
@@ -78,7 +79,8 @@ class TransactionService extends BaseTransactionService {
                 'transaction_id' => $data['id'],
                 'transaction_amount' => $amount,
                 'transaction_link' => $data['link'],
-                'is_verified' => '0'
+                'is_verified' => '0',
+                'unique_id' => $key
             ]);
 
             return TransactionResponse::successful(Response::HTTP_CREATED, $this->getStatus(201), $data);
@@ -90,29 +92,28 @@ class TransactionService extends BaseTransactionService {
     /**
      * Verify a transaction with the given transaction ID and order ID.
      *
-     * @param string $transactionId The transaction ID.
-     * @param string $orderId The order ID.
+     * @param string $uniqueId The specific id of created transaction.
      *
      * @return TransactionResponse The response from the verification process.
      */
-    public function verify($transactionId, $orderId): TransactionResponse {
-        if (request()?->status() || request()?->status() !== '100') {
+    public function verify(string $uniqueId): TransactionResponse {
+        if (request()?->status() !== '100') {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, $this->getStatus(102));
         }
 
-        if (Transaction::isVerified($transactionId)) {
+        if (!Transaction::isVerified($uniqueId)) {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
         }
 
-        $transaction = Transaction::whereTransactionId($transactionId)->first();
-        if (!$transaction || $transaction->order_id !== $orderId) {
+        $transaction = Transaction::whereUniqueId($uniqueId)->first();
+        if (!$transaction) {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
         }
 
         try {
             $response = $this->post($this->getEndpoint('payment/verify'), [
-                'id' => $transactionId,
-                'order_id' => $orderId
+                'id' => $transaction->transaction_id,
+                'order_id' => $transaction->order_id
             ]);
         } catch (Exception) {
             return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
