@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
+use \Illuminate\Http\Client\Response as HttpResponse;
 
 /**
  * TransactionService handles the interactions with the IDPay payment gateway.
@@ -20,15 +21,33 @@ class TransactionService extends BaseTransactionService {
     protected const SANDBOX_URL   = '';
 
     /**
-     * Get the full API endpoint URL for a specific method.
+     * Get the main API endpoint.
      *
-     * @param string $method The API method to call.
-     * @param bool $sand_box Whether to use the sandbox environment.
+     * Constructs the full URL for the main API endpoint. If a method is provided,
+     * it appends the method to the base URL.
      *
-     * @return string The full API endpoint URL.
+     * @param string|null $method The API method to append to the base URL. Defaults to null.
+     *
+     * @return string The full URL for the main API endpoint.
      */
-    protected function getEndpoint(string $method, bool $sand_box = false): string {
-        return $sand_box ? static::SANDBOX_URL : static::BASE_API_URL . '/' . trim($method, '/');
+    protected function getMainEndpoint(string $method = null): string {
+        $url = static::BASE_API_URL;
+        return $method ? $url . '/' . trim($method, '/') : $url;
+    }
+
+    /**
+     * Get the sandbox API endpoint.
+     *
+     * Constructs the full URL for the sandbox API endpoint. If a method is provided,
+     * it appends the method to the sandbox URL.
+     *
+     * @param string|null $method The API method to append to the sandbox URL. Defaults to null.
+     *
+     * @return string The full URL for the sandbox API endpoint.
+     */
+    protected function getSandboxEndpoint(string $method = null): string {
+        $url = static::SANDBOX_URL;
+        return $method ? $url . '/' . trim($method, '/') : $url;
     }
 
     /**
@@ -38,10 +57,10 @@ class TransactionService extends BaseTransactionService {
      * @param array $data The data to include in the POST request.
      * @param array|null $headers Optional headers to include in the request.
      *
+     * @return HttpResponse The response from the POST request.
      * @throws ConnectionException Throws an ConnectionException on connection errors.
-     * @return \Illuminate\Http\Client\Response The response from the POST request.
      */
-    protected function post(string $url, array $data = [], ?array $headers = null): \Illuminate\Http\Client\Response {
+    protected function post(string $url, array $data = [], ?array $headers = null): HttpResponse {
         return HTTP::withHeaders($headers ?? [
             'X-API-KEY' => self::API_KEY,
             'X-SANDBOX' => 1,
@@ -60,7 +79,7 @@ class TransactionService extends BaseTransactionService {
     public function transaction($orderId, $amount): TransactionResponse {
         $key = Transaction::generateUniqueId();
         try {
-            $response = $this->post($this->getEndpoint('payment'), [
+            $response = $this->post($this->getMainEndpoint('payment'), [
                 'order_id' => $orderId,
                 'amount' => $amount,
                 'callback' => static::CALL_BACK_URL . '/' . $key
@@ -111,7 +130,7 @@ class TransactionService extends BaseTransactionService {
         }
 
         try {
-            $response = $this->post($this->getEndpoint('payment/verify'), [
+            $response = $this->post($this->getMainEndpoint('payment/verify'), [
                 'id' => $transaction->transaction_id,
                 'order_id' => $transaction->order_id
             ]);

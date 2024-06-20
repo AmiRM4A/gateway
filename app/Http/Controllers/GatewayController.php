@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TransactionService;
 use App\Http\Requests\GatewayRequest;
 
 class GatewayController {
@@ -11,8 +12,8 @@ class GatewayController {
         return self::BASE_SERVICE_PATH . $name . '\TransactionService';
     }
 
-    protected function getService(string $name) {
-        return new ($this->getServiceName($name))();
+    protected function getService(string $name): TransactionService {
+        return resolve($this->getServiceName($name));
     }
 
     public function transaction(GatewayRequest $request) {

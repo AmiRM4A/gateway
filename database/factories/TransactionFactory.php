@@ -24,8 +24,6 @@ class TransactionFactory extends Factory
             'amount' => $this->faker->randomFloat(2, 1, 1000), // Random float between 1 and 1000 with 2 decimal points
             'link' => $this->faker->url,
             'is_verified' => $this->faker->randomElement(['0', '1']),
-            'created_at' => now(),
-            'updated_at' => now(),
         ];
     }
 }

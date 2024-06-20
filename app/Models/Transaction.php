@@ -10,13 +10,10 @@ class Transaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'order_id',
-        'transaction_id',
-        'amount',
-        'link',
-        'is_verified',
-        'unique_id'
+    protected $guarded = [
+        'created_at',
+        'updated_at',
+        'id'
     ];
 
     public static function isVerified($uniqueId): bool {

@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Response;
+
 abstract class TransactionService implements TransactionServiceInterface {
-    abstract protected function getEndpoint(string $method, bool $sand_box = false): string;
-    abstract protected function post(string $url, array $data = [], ?array $headers = null);
+    abstract protected function getMainEndpoint(?string $method = null): string;
+    abstract protected function getSandboxEndpoint(?string $method = null): string;
+    abstract protected function post(string $url, array $data = [], ?array $headers = null): Response;
     protected function getSuccessStatus(): array {
         return [
             0 => 'عملیات با موفقیت انجام شد.'
