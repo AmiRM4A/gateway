@@ -124,7 +124,7 @@ class TransactionService extends BaseTransactionService {
         $errorCode = $data['error_code'] ?? null;
 
         if ($statusCode === Response::HTTP_OK && !$errorCode) {
-            if ($data['payment']['amount'] !== $transaction->transaction_amount) {
+            if ($data['payment']['amount'] !== $transaction->amount) {
                 return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
             }
 
