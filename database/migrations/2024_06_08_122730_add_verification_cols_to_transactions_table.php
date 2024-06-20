@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->enum('is_verified', [1, 0])->after('transaction_link')->default(0)->comment('وضعیت تاییدیه تراکنش');
+            $table->enum('is_verified', [1, 0])->after('link')->default(0)->comment('وضعیت تاییدیه تراکنش');
         });
     }
 
