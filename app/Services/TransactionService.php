@@ -10,7 +10,7 @@ abstract class TransactionService implements TransactionServiceInterface {
             0 => 'عملیات با موفقیت انجام شد.'
         ];
     }
-    protected function getFailureStatus() {
+    protected function getFailureStatus(): array {
         return [
             -1 => 'عملیات با خطا مواجه شد'
         ];
