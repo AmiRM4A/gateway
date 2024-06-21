@@ -21,6 +21,6 @@ class Transaction extends Model
     }
 
     public static function generateUniqueId(): string {
-        return hash('sha256', Str::random(32) . uniqid('', true));
+        return md5(uniqid('', true));
     }
 }
