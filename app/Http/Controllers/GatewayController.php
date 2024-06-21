@@ -18,10 +18,10 @@ class GatewayController {
         return resolve($this->getServiceName($name), ['uniqueId' => $uniqueId]);
     }
 
-    public function transaction(GatewayRequest $request) {
+    public function create(GatewayRequest $request) {
         try {
-            $service = $this->getService($request->gateway);
-            $request->validate($service->getCreateTransactionRules());
+            $service = $this->getServiceName($request->gateway);
+            $request->validate($service::getCreateTransactionRules());
             $response = $service::create($request->order_id, $request->amount);
             return response([
                 'success' => $response->getSuccess(),
