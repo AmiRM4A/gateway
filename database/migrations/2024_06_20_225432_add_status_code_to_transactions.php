@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->integer('status_code')->nullable()->unsigned()->after('unique_id')->comment('وضعیت تراکنش پس از عملیات');
+            $table->unsignedInteger('status_code')->nullable()->after('unique_id')->comment('وضعیت تراکنش پس از عملیات');
         });
     }
 
