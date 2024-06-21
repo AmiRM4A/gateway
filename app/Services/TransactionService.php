@@ -21,7 +21,7 @@ abstract class TransactionService implements TransactionServiceContract {
     protected function getDefaultStatus(): string {
         return 'وضعیت نامشخص';
     }
-    protected function getStatus(int $code): ?string {
+    protected function getStatus(int $code): string {
         return ($this->status() + $this->getFailureStatus() + $this->getSuccessStatus())[$code] ?: $this->getDefaultStatus();
     }
     abstract protected function status(): array;
