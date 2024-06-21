@@ -3,6 +3,6 @@
 namespace App\Services;
 
 interface TransactionServiceContract {
-    public function transaction($orderId, $amount): TransactionResponse;
-    public function verify(string $uniqueId): TransactionResponse;
+    public static function create(string $orderId, int $amount): TransactionResponse;
+    public function verify(): TransactionResponse;
 }
