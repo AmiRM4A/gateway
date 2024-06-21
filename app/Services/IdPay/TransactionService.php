@@ -8,7 +8,7 @@ use App\Models\Transaction;
 use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
-use \Illuminate\Http\Client\Response as HttpResponse;
+use Illuminate\Http\Client\Response as HttpResponse;
 
 /**
  * TransactionService handles the interactions with the IDPay payment gateway.
@@ -50,16 +50,18 @@ class TransactionService extends BaseTransactionService {
     }
 
     /**
-     * Make a POST request to the specified URL with the given data and headers.
+     * Makes a POST request to the specified URL with the given data and headers.
      *
-     * @param string $url The URL to send the POST request to.
+     * @param string $method The specific API method to call.
+     * @param bool $sand_box If true, use the sandbox URL; otherwise, use the main URL.
      * @param array $data The data to include in the POST request.
      * @param array|null $headers Optional headers to include in the request.
      *
      * @return HttpResponse The response from the POST request.
-     * @throws ConnectionException Throws an ConnectionException on connection errors.
+     * @throws ConnectionException If a connection error occurs.
      */
-    protected static function post(string $url, array $data = [], ?array $headers = null): HttpResponse {
+    protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse {
+        $url = $sand_box ? static::getSandboxEndpoint($method) : static::getMainEndpoint($method);
         return HTTP::withHeaders($headers ?? [
             'X-API-KEY' => self::API_KEY,
             'X-SANDBOX' => 1,
@@ -74,10 +76,11 @@ class TransactionService extends BaseTransactionService {
      * @param int $amount The transaction amount.
      *
      * @return TransactionResponse The response from the transaction creation.
+     * @throws ConnectionException If a connection error occurs.
      */
     public static function create(string $orderId, int $amount): TransactionResponse {
         $key = Transaction::generateUniqueId();
-        $response = static::post(static::getMainEndpoint('payment'), [
+        $response = static::post('payment', [
             'order_id' => $orderId,
             'amount' => $amount,
             'callback' => static::CALL_BACK_URL . '/' . $key
@@ -107,6 +110,7 @@ class TransactionService extends BaseTransactionService {
      * Verify a transaction with the given transaction ID and order ID.
      *
      * @return TransactionResponse The response from the verification process.
+     * @throws ConnectionException If a connection error occurs.
      */
     public function verify(): TransactionResponse {
         if (request()?->status() !== '100') {
@@ -117,7 +121,7 @@ class TransactionService extends BaseTransactionService {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
         }
 
-        $response = static::post(static::getMainEndpoint('payment/verify'), [
+        $response = static::post('payment/verify', [
             'id' => $this->transaction->transaction_id,
             'order_id' => $this->transaction->order_id
         ]);
@@ -144,11 +148,11 @@ class TransactionService extends BaseTransactionService {
      *
      * @return array The validation rules.
      */
-    public function getCreateTransactionRules(): array {
+    public static function getCreateTransactionRules(): array {
         return [
             'order_id' => ['required', 'string', 'max:50'],
             'name' => ['string'],
-            'phone' => ['string', 'max:11', 'regex:/^(98|0)?9/'],
+            'phone' => ['string', 'max:11', 'regex:/^(98|0)?9\d{9}/'],
             'mail' => ['string', 'email', 'max:255'],
             'desc' => ['string', 'max:255'],
         ];

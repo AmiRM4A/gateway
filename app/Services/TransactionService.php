@@ -17,7 +17,9 @@ abstract class TransactionService implements TransactionServiceContract {
     }
     abstract protected static function getMainEndpoint(?string $method = null): string;
     abstract protected static function getSandboxEndpoint(?string $method = null): string;
-    abstract protected static function post(string $url, array $data = [], ?array $headers = null): Response;
+
+    abstract protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): Response;
+
     protected static function getSuccessStatus(): array {
         return [
             0 => 'عملیات با موفقیت انجام شد.'
