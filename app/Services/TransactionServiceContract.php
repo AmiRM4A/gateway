@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-interface TransactionServiceInterface {
+interface TransactionServiceContract {
     public function transaction($orderId, $amount): TransactionResponse;
     public function verify(string $uniqueId): TransactionResponse;
 }
