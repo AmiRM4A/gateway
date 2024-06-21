@@ -19,7 +19,7 @@ class TransactionFactory extends Factory
     {
         return [
             'unique_id' => Transaction::generateUniqueId(),
-            'order_id' => $this->faker->uuid,
+            'order_id' => $this->faker->unique()->randomNumber(),
             'transaction_id' => $this->faker->uuid,
             'amount' => $this->faker->randomFloat(2, 1, 1000), // Random float between 1 and 1000 with 2 decimal points
             'link' => $this->faker->url,
