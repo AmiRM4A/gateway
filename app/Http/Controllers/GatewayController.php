@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Throwable;
 use App\Services\TransactionService;
 use App\Http\Requests\GatewayRequest;
-use App\Services\TransactionResponse;
 use App\Services\TransactionServiceException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -53,10 +52,6 @@ class GatewayController {
         try {
             $service = $this->getService($request->gateway);
             $request->validate($service::getCreateTransactionRules());
-
-            /**
-             * @var TransactionResponse $response
-             */
             $response = $service::create($request->order_id, $request->amount);
 
             return response([
@@ -74,7 +69,7 @@ class GatewayController {
 
         return response([
             'success' => false,
-            'message' => $exceptionMessage,
+            'message' => config('app.debug') ? $exceptionMessage : 'ساخت تراکنش با خطا مواجه شد!',
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
@@ -83,9 +78,9 @@ class GatewayController {
      *
      * @param GatewayRequest $request The incoming HTTP request.
      */
-    public function verify(GatewayRequest $request) {
+    public function verify(GatewayRequest $request, $unique_id) {
         try {
-            $service = $this->getService($request->gateway, $request->unique_id);
+            $service = $this->getService($request->gateway, $unique_id);
             $response = $service->verify();
 
             return response([
@@ -101,7 +96,7 @@ class GatewayController {
 
         return response([
             'success' => false,
-            'message' => $exceptionMessage,
+            'message' => config('app.debug') ? $exceptionMessage : 'تایید تراکنش با خطا مواجه شد!',
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
