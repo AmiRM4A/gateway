@@ -62,12 +62,19 @@ class TransactionService extends BaseTransactionService {
      * @throws ConnectionException If a connection error occurs.
      */
     protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse {
-        $url = $sand_box ? static::getSandboxEndpoint($method) : static::getMainEndpoint($method);
-        return HTTP::withHeaders($headers ?? [
+        $headers = $headers ?? [
             'X-API-KEY' => self::API_KEY,
-            'X-SANDBOX' => 1,
             'Content-Type' => 'application/json'
-        ])->post($url, $data);
+        ];
+
+        if ($sand_box) {
+            $headers['X-SANDBOX'] = 1;
+            $url = static::getSandboxEndpoint($method);
+        } else {
+            $url = static::getMainEndpoint();
+        }
+
+        return HTTP::withHeaders($headers)->post($url, $data);
     }
 
     /**
