@@ -10,17 +10,45 @@ use App\Services\TransactionResponse;
 use App\Services\TransactionServiceException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/**
+ * Class GatewayController
+ *
+ * @package App\Http\Controllers
+ */
 class GatewayController {
+    /**
+     * The base namespace for transaction service classes.
+     */
     protected const BASE_SERVICE_PATH = 'App\Services\\';
 
+    /**
+     * Constructs the full class name for the specified service.
+     *
+     * @param string $name The name of the service.
+     *
+     * @return string The fully qualified class name of the service.
+     */
     protected function getServiceName(string $name): string {
         return self::BASE_SERVICE_PATH . $name . '\TransactionService';
     }
 
+    /**
+     * Resolves and retrieves an instance of the specified transaction service.
+     *
+     * @param string $name The name of the service.
+     * @param string|null $uniqueId Optional unique identifier for the service instance.
+     *
+     * @return TransactionService The resolved instance of TransactionService.
+     */
     protected function getService(string $name, ?string $uniqueId = null): TransactionService {
         return resolve($this->getServiceName($name), ['uniqueId' => $uniqueId]);
     }
 
+    /**
+     * Handles the creation of a new transaction via the specified gateway.
+     *
+     * @param GatewayRequest $request The incoming HTTP request.
+     */
     public function create(GatewayRequest $request) {
         try {
             $service = $this->getService($request->gateway);
@@ -50,6 +78,11 @@ class GatewayController {
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
+    /**
+     * Handles the verification of an existing transaction via the specified gateway and unique ID.
+     *
+     * @param GatewayRequest $request The incoming HTTP request.
+     */
     public function verify(GatewayRequest $request) {
         try {
             $service = $this->getService($request->gateway, $request->unique_id);
