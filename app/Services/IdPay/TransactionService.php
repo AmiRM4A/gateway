@@ -2,6 +2,7 @@
 
 namespace App\Services\IdPay;
 
+use App\Services\TransactionServiceException;
 use Illuminate\Http\Client\ConnectionException;
 use App\Services\TransactionService as BaseTransactionService;
 use App\Models\Transaction;
@@ -76,15 +77,19 @@ class TransactionService extends BaseTransactionService {
      * @param int $amount The transaction amount.
      *
      * @return TransactionResponse The response from the transaction creation.
-     * @throws ConnectionException If a connection error occurs.
+     * @throws TransactionServiceException If a connection error occurs.
      */
     public static function create(string $orderId, int $amount): TransactionResponse {
-        $key = Transaction::generateUniqueId();
-        $response = static::post('payment', [
-            'order_id' => $orderId,
-            'amount' => $amount,
-            'callback' => static::CALL_BACK_URL . '/' . $key
-        ]);
+        $uniqueId = Transaction::generateUniqueId();
+        try {
+            $response = static::post('payment', [
+                'order_id' => $orderId,
+                'amount' => $amount,
+                'callback' => static::CALL_BACK_URL . '/' . $uniqueId
+            ]);
+        } catch (ConnectionException $e) {
+            throw new TransactionServiceException('خطا در ساخت تراکنش: ' . $e->getMessage(), $e->getCode());
+        }
 
         $statusCode = $response->status();
         $data = $response->json();
@@ -97,9 +102,10 @@ class TransactionService extends BaseTransactionService {
                 'transaction_amount' => $amount,
                 'transaction_link' => $data['link'],
                 'is_verified' => '0',
-                'unique_id' => $key
+                'unique_id' => $uniqueId
             ]);
 
+            $data = array_merge($data, ['unique_id' => $uniqueId]);
             return TransactionResponse::successful(Response::HTTP_CREATED, static::getStatus(201), $data);
         }
 
@@ -107,10 +113,10 @@ class TransactionService extends BaseTransactionService {
     }
 
     /**
-     * Verify a transaction with the given transaction ID and order ID.
+     * Verify the existed transaction.
      *
      * @return TransactionResponse The response from the verification process.
-     * @throws ConnectionException If a connection error occurs.
+     * @throws TransactionServiceException If a connection error occurs.
      */
     public function verify(): TransactionResponse {
         if (request()?->status() !== '100') {
@@ -121,10 +127,14 @@ class TransactionService extends BaseTransactionService {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
         }
 
-        $response = static::post('payment/verify', [
-            'id' => $this->transaction->transaction_id,
-            'order_id' => $this->transaction->order_id
-        ]);
+        try {
+            $response = static::post('payment/verify', [
+                'id' => $this->transaction->transaction_id,
+                'order_id' => $this->transaction->order_id
+            ]);
+        } catch (ConnectionException $e) {
+            throw new TransactionServiceException('خطا در تایید تراکنش: ' . $e->getMessage(), $e->getCode());
+        }
 
         $statusCode = $response->status();
         $data = $response->json();

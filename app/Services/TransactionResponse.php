@@ -10,11 +10,11 @@ namespace App\Services;
 class TransactionResponse {
     public function __construct(
         protected int $status = 200,
-        protected bool $success = true,
+        protected bool $success = false,
         protected ?string $message = null,
         protected ?array $data = null,
         protected ?string $link = null,
-        protected ?string $id = null
+        protected ?string $uniqueId = null
     ) {
 
     }
@@ -77,14 +77,14 @@ class TransactionResponse {
     }
 
     /**
-     * Set the transaction ID.
+     * Set the transaction unique ID.
      *
-     * @param string $id The transaction ID.
+     * @param string $uniqueId The transaction unique ID.
      *
      * @return static Returns the current instance of the object.
      */
-    public function transactionId(string $id): static {
-        $this->id = $id;
+    public function uniqueId(string $uniqueId): static {
+        $this->uniqueId = $uniqueId;
         return $this;
     }
 
@@ -146,12 +146,12 @@ class TransactionResponse {
     }
 
     /**
-     * Get the transaction ID.
+     * Get the unique transaction ID.
      *
-     * @return string|null The transaction ID.
+     * @return string|null The unique transaction ID.
      */
-    public function getTransactionId(): ?string {
-        return $this->id;
+    public function getUniqueId(): ?string {
+        return $this->uniqueId;
     }
 
     /**
