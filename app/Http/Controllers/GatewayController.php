@@ -21,52 +21,54 @@ class GatewayController {
         return resolve($this->getServiceName($name), ['uniqueId' => $uniqueId]);
     }
 
-    public function create(GatewayRequest $request): void {
-        $response = resolve(TransactionResponse::class);
-
+    public function create(GatewayRequest $request) {
         try {
-            /**
-             * @var $service TransactionService
-             */
-            $service = $this->getServiceName($request->gateway);
+            $service = $this->getService($request->gateway);
             $request->validate($service::getCreateTransactionRules());
+
             /**
-             * @var $response TransactionResponse
+             * @var TransactionResponse $response
              */
             $response = $service::create($request->order_id, $request->amount);
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $response->message($e->getMessage());
-        } catch (Throwable $e) {
-            $response->message($e->getMessage());
-        } finally {
-            response([
+
+            return response([
                 'success' => $response->getSuccess(),
                 'message' => $response->getMessage(),
                 'unique_id' => $response->getUniqueId(),
                 'link' => $response->getLink(),
                 'data' => $response->getData()
-            ], $response->getStatus() ?? Response::HTTP_INTERNAL_SERVER_ERROR)->send();
+            ], $response->getStatus());
+        } catch (NotFoundHttpException|TransactionServiceException $e) {
+            $exceptionMessage = $e->getMessage();
+        } catch (Throwable $e) {
+            $exceptionMessage = $e->getMessage();
         }
+
+        return response([
+            'success' => false,
+            'message' => $exceptionMessage,
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
-    public function verify(GatewayRequest $request): void {
-        $response = resolve(TransactionResponse::class);
-
+    public function verify(GatewayRequest $request) {
         try {
             $service = $this->getService($request->gateway, $request->unique_id);
             $response = $service->verify();
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $response->message($e->getMessage());
-        } catch (Throwable $e) {
-            $response->message($e->getMessage());
-        } finally {
-            response([
+
+            return response([
                 'success' => $response->getSuccess(),
                 'message' => $response->getMessage(),
-                'unique_id' => $response->getUniqueId(),
-                'link' => $response->getLink(),
                 'data' => $response->getData()
-            ], $response->getStatus() ?? Response::HTTP_INTERNAL_SERVER_ERROR)->send();
+            ], $response->getStatus());
+        } catch (NotFoundHttpException|TransactionServiceException $e) {
+            $exceptionMessage = $e->getMessage();
+        } catch (Throwable $e) {
+            $exceptionMessage = $e->getMessage();
         }
+
+        return response([
+            'success' => false,
+            'message' => $exceptionMessage,
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
