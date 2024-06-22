@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use Throwable;
-use Illuminate\Http\Response;
 use App\Services\TransactionService;
 use App\Http\Requests\GatewayRequest;
 use App\Services\TransactionResponse;
 use App\Services\TransactionServiceException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**

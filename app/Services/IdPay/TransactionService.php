@@ -6,10 +6,10 @@ use App\Services\TransactionServiceException;
 use Illuminate\Http\Client\ConnectionException;
 use App\Services\TransactionService as BaseTransactionService;
 use App\Models\Transaction;
-use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Response as HttpResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * TransactionService handles the interactions with the IDPay payment gateway.
