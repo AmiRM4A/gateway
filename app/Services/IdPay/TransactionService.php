@@ -71,7 +71,7 @@ class TransactionService extends BaseTransactionService {
             $headers['X-SANDBOX'] = 1;
             $url = static::getSandboxEndpoint($method);
         } else {
-            $url = static::getMainEndpoint();
+            $url = static::getMainEndpoint($method);
         }
 
         return HTTP::withHeaders($headers)->post($url, $data);
@@ -95,7 +95,7 @@ class TransactionService extends BaseTransactionService {
                 'callback' => static::CALL_BACK_URL . '/' . $uniqueId
             ]);
         } catch (ConnectionException $e) {
-            throw new TransactionServiceException('خطا در ساخت تراکنش: ' . $e->getMessage(), $e->getCode());
+            throw new TransactionServiceException($e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
@@ -106,9 +106,8 @@ class TransactionService extends BaseTransactionService {
             Transaction::create([
                 'order_id' => $orderId,
                 'transaction_id' => $data['id'],
-                'transaction_amount' => $amount,
-                'transaction_link' => $data['link'],
-                'is_verified' => '0',
+                'amount' => $amount,
+                'link' => $data['link'],
                 'unique_id' => $uniqueId
             ]);
 
@@ -126,11 +125,11 @@ class TransactionService extends BaseTransactionService {
      * @throws TransactionServiceException If a connection error occurs.
      */
     public function verify(): TransactionResponse {
-        if (request()?->status() !== '100') {
+        if (request()->status !== 100) {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, static::getStatus(102));
         }
 
-        if ($this->transaction->is_verified === 0) {
+        if ($this->transaction->is_verified !== '0') {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
         }
 
@@ -140,7 +139,7 @@ class TransactionService extends BaseTransactionService {
                 'order_id' => $this->transaction->order_id
             ]);
         } catch (ConnectionException $e) {
-            throw new TransactionServiceException('خطا در تایید تراکنش: ' . $e->getMessage(), $e->getCode());
+            throw new TransactionServiceException($e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
@@ -152,8 +151,11 @@ class TransactionService extends BaseTransactionService {
                 return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
             }
 
-            $this->transaction->is_verified = 1;
-            $this->transaction->update();
+            $this->transaction->update([
+                'is_verified' => 1,
+                'track_id' => $data['track_id'],
+                'status_code' => $data['status']
+            ]);
             return TransactionResponse::successful(Response::HTTP_OK, static::getStatus(102), $data);
         }
 
