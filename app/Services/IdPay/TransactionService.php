@@ -129,7 +129,7 @@ class TransactionService extends BaseTransactionService {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, static::getStatus(102));
         }
 
-        if ($this->transaction->is_verified === 0) {
+        if ($this->transaction->is_verified !== '0') {
             return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
         }
 
