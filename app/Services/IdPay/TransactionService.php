@@ -152,8 +152,11 @@ class TransactionService extends BaseTransactionService {
                 return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
             }
 
-            $this->transaction->is_verified = 1;
-            $this->transaction->update();
+            $this->transaction->update([
+                'is_verified' => 1,
+                'track_id' => $data['track_id'],
+                'status_code' => $data['status']
+            ]);
             return TransactionResponse::successful(Response::HTTP_OK, static::getStatus(102), $data);
         }
 
