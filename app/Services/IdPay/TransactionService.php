@@ -125,7 +125,7 @@ class TransactionService extends BaseTransactionService {
      * @throws TransactionServiceException If a connection error occurs.
      */
     public function verify(): TransactionResponse {
-        if (request()?->status() !== '100') {
+        if (request()->status !== 100) {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, static::getStatus(102));
         }
 
