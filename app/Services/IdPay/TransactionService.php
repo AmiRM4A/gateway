@@ -71,7 +71,7 @@ class TransactionService extends BaseTransactionService {
             $headers['X-SANDBOX'] = 1;
             $url = static::getSandboxEndpoint($method);
         } else {
-            $url = static::getMainEndpoint();
+            $url = static::getMainEndpoint($method);
         }
 
         return HTTP::withHeaders($headers)->post($url, $data);
