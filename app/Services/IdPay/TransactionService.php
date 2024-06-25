@@ -95,7 +95,7 @@ class TransactionService extends BaseTransactionService {
                 'callback' => static::CALL_BACK_URL . '/' . $uniqueId
             ]);
         } catch (ConnectionException $e) {
-            throw new TransactionServiceException('خطا در ساخت تراکنش: ' . $e->getMessage(), $e->getCode());
+            throw new TransactionServiceException($e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
@@ -140,7 +140,7 @@ class TransactionService extends BaseTransactionService {
                 'order_id' => $this->transaction->order_id
             ]);
         } catch (ConnectionException $e) {
-            throw new TransactionServiceException('خطا در تایید تراکنش: ' . $e->getMessage(), $e->getCode());
+            throw new TransactionServiceException($e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
