@@ -106,9 +106,8 @@ class TransactionService extends BaseTransactionService {
             Transaction::create([
                 'order_id' => $orderId,
                 'transaction_id' => $data['id'],
-                'transaction_amount' => $amount,
-                'transaction_link' => $data['link'],
-                'is_verified' => '0',
+                'amount' => $amount,
+                'link' => $data['link'],
                 'unique_id' => $uniqueId
             ]);
 
