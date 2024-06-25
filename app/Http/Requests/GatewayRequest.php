@@ -14,7 +14,6 @@ class GatewayRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_id' => ['required', 'string', 'max:50'],
             'gateway' => ['required', 'string']
         ];
     }

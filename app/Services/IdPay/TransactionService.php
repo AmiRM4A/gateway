@@ -2,13 +2,14 @@
 
 namespace App\Services\IdPay;
 
-use Exception;
+use App\Services\TransactionServiceException;
 use Illuminate\Http\Client\ConnectionException;
 use App\Services\TransactionService as BaseTransactionService;
 use App\Models\Transaction;
-use Illuminate\Http\Response;
 use App\Services\TransactionResponse;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\Response as HttpResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * TransactionService handles the interactions with the IDPay payment gateway.
@@ -20,33 +21,60 @@ class TransactionService extends BaseTransactionService {
     protected const SANDBOX_URL   = '';
 
     /**
-     * Get the full API endpoint URL for a specific method.
+     * Get the main API endpoint.
      *
-     * @param string $method The API method to call.
-     * @param bool $sand_box Whether to use the sandbox environment.
+     * Constructs the full URL for the main API endpoint. If a method is provided,
+     * it appends the method to the base URL.
      *
-     * @return string The full API endpoint URL.
+     * @param string|null $method The API method to append to the base URL. Defaults to null.
+     *
+     * @return string The full URL for the main API endpoint.
      */
-    protected function getEndpoint(string $method, bool $sand_box = false): string {
-        return $sand_box ? static::SANDBOX_URL : static::BASE_API_URL . '/' . trim($method, '/');
+    protected static function getMainEndpoint(string $method = null): string {
+        $url = static::BASE_API_URL;
+        return $method ? $url . '/' . trim($method, '/') : $url;
     }
 
     /**
-     * Make a POST request to the specified URL with the given data and headers.
+     * Get the sandbox API endpoint.
      *
-     * @param string $url The URL to send the POST request to.
+     * Constructs the full URL for the sandbox API endpoint. If a method is provided,
+     * it appends the method to the sandbox URL.
+     *
+     * @param string|null $method The API method to append to the sandbox URL. Defaults to null.
+     *
+     * @return string The full URL for the sandbox API endpoint.
+     */
+    protected static function getSandboxEndpoint(string $method = null): string {
+        $url = static::SANDBOX_URL;
+        return $method ? $url . '/' . trim($method, '/') : $url;
+    }
+
+    /**
+     * Makes a POST request to the specified URL with the given data and headers.
+     *
+     * @param string $method The specific API method to call.
+     * @param bool $sand_box If true, use the sandbox URL; otherwise, use the main URL.
      * @param array $data The data to include in the POST request.
      * @param array|null $headers Optional headers to include in the request.
      *
-     * @throws ConnectionException Throws an ConnectionException on connection errors.
-     * @return \Illuminate\Http\Client\Response The response from the POST request.
+     * @return HttpResponse The response from the POST request.
+     * @throws ConnectionException If a connection error occurs.
      */
-    protected function post(string $url, array $data = [], ?array $headers = null): \Illuminate\Http\Client\Response {
-        return HTTP::withHeaders($headers ?? [
+    protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse {
+        $headers = $headers ?? [
             'X-API-KEY' => self::API_KEY,
-            'X-SANDBOX' => 1,
             'Content-Type' => 'application/json'
-        ])->post($url, $data);
+        ];
+
+        if ($sand_box) {
+            $headers['X-SANDBOX'] = 1;
+            $url = static::getSandboxEndpoint($method);
+        } else {
+            $url = static::getMainEndpoint();
+        }
+
+        return HTTP::withHeaders($headers)->post($url, $data);
     }
 
     /**
@@ -56,16 +84,18 @@ class TransactionService extends BaseTransactionService {
      * @param int $amount The transaction amount.
      *
      * @return TransactionResponse The response from the transaction creation.
+     * @throws TransactionServiceException If a connection error occurs.
      */
-    public function transaction($orderId, $amount): TransactionResponse {
+    public static function create(string $orderId, int $amount): TransactionResponse {
+        $uniqueId = Transaction::generateUniqueId();
         try {
-            $response = $this->post($this->getEndpoint('payment'), [
+            $response = static::post('payment', [
                 'order_id' => $orderId,
                 'amount' => $amount,
-                'callback' => static::CALL_BACK_URL
+                'callback' => static::CALL_BACK_URL . '/' . $uniqueId
             ]);
-        } catch (Exception) {
-            return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
+        } catch (ConnectionException $e) {
+            throw new TransactionServiceException('خطا در ساخت تراکنش: ' . $e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
@@ -78,44 +108,39 @@ class TransactionService extends BaseTransactionService {
                 'transaction_id' => $data['id'],
                 'transaction_amount' => $amount,
                 'transaction_link' => $data['link'],
-                'is_verified' => '0'
+                'is_verified' => '0',
+                'unique_id' => $uniqueId
             ]);
 
-            return TransactionResponse::successful(Response::HTTP_CREATED, $this->getStatus(201), $data);
+            $data = array_merge($data, ['unique_id' => $uniqueId]);
+            return TransactionResponse::successful(Response::HTTP_CREATED, static::getStatus(201), $data);
         }
 
-        return TransactionResponse::failure($response->status(), $this->getStatus(-1), $data);
+        return TransactionResponse::failure($response->status(), static::getStatus(-1), $data);
     }
 
     /**
-     * Verify a transaction with the given transaction ID and order ID.
-     *
-     * @param string $transactionId The transaction ID.
-     * @param string $orderId The order ID.
+     * Verify the existed transaction.
      *
      * @return TransactionResponse The response from the verification process.
+     * @throws TransactionServiceException If a connection error occurs.
      */
-    public function verify($transactionId, $orderId): TransactionResponse {
-        if (request()?->status() || request()?->status() !== '100') {
-            return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, $this->getStatus(102));
+    public function verify(): TransactionResponse {
+        if (request()?->status() !== '100') {
+            return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, static::getStatus(102));
         }
 
-        if (Transaction::isVerified($transactionId)) {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
-        }
-
-        $transaction = Transaction::whereTransactionId($transactionId)->first();
-        if (!$transaction || $transaction->order_id !== $orderId) {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
+        if ($this->transaction->is_verified === 0) {
+            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
         }
 
         try {
-            $response = $this->post($this->getEndpoint('payment/verify'), [
-                'id' => $transactionId,
-                'order_id' => $orderId
+            $response = static::post('payment/verify', [
+                'id' => $this->transaction->transaction_id,
+                'order_id' => $this->transaction->order_id
             ]);
-        } catch (Exception) {
-            return TransactionResponse::failure(Response::HTTP_INTERNAL_SERVER_ERROR, $this->getStatus(-1));
+        } catch (ConnectionException $e) {
+            throw new TransactionServiceException('خطا در تایید تراکنش: ' . $e->getMessage(), $e->getCode());
         }
 
         $statusCode = $response->status();
@@ -123,16 +148,16 @@ class TransactionService extends BaseTransactionService {
         $errorCode = $data['error_code'] ?? null;
 
         if ($statusCode === Response::HTTP_OK && !$errorCode) {
-            if ($data['payment']['amount'] !== $transaction->transaction_amount) {
-                return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
+            if ($data['payment']['amount'] !== $this->transaction->amount) {
+                return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
             }
 
-            $transaction->is_verified = 1;
-            $transaction->update();
-            return TransactionResponse::successful(Response::HTTP_OK, $this->getStatus(102), $data);
+            $this->transaction->is_verified = 1;
+            $this->transaction->update();
+            return TransactionResponse::successful(Response::HTTP_OK, static::getStatus(102), $data);
         }
 
-        return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, $this->getStatus(102));
+        return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
     }
 
     /**
@@ -140,23 +165,13 @@ class TransactionService extends BaseTransactionService {
      *
      * @return array The validation rules.
      */
-    public function getTransactionRules(): array {
+    public static function getCreateTransactionRules(): array {
         return [
+            'order_id' => ['required', 'string', 'max:50'],
             'name' => ['string'],
-            'phone' => ['string', 'max:11', 'regex:/^(98|0)?9/'],
+            'phone' => ['string', 'max:11', 'regex:/^(98|0)?9\d{9}/'],
             'mail' => ['string', 'email', 'max:255'],
             'desc' => ['string', 'max:255'],
-        ];
-    }
-
-    /**
-     * Get the validation rules for verifying a transaction.
-     *
-     * @return array The validation rules.
-     */
-    public function getVerifyRules(): array {
-        return [
-            'id' => ['required', 'string']
         ];
     }
 
@@ -165,7 +180,7 @@ class TransactionService extends BaseTransactionService {
      *
      * @return array The status messages.
      */
-    protected function status(): array {
+    protected static function status(): array {
         return [
             1 => 'پرداخت انجام نشده است',
             2 => 'پرداخت ناموفق بوده است',

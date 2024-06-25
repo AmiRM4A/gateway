@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->enum('is_verified', [1, 0])->after('link')->default(0)->comment('وضعیت تاییدیه تراکنش');
+            $table->string('unique_id',64)->unique()->after('id')->comment('کلید یکتا ساخته شده برای هر تراکنش');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropColumn('is_verified');
+            $table->dropColumn('unique_id');
         });
     }
 };
