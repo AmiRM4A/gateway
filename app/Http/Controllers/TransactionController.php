@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Throwable;
 use App\Services\TransactionService;
-use App\Http\Requests\GatewayRequest;
+use App\Http\Requests\TransactionRequest;
 use App\Services\TransactionServiceException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -46,9 +46,9 @@ class TransactionController {
     /**
      * Handles the creation of a new transaction via the specified gateway.
      *
-     * @param GatewayRequest $request The incoming HTTP request.
+     * @param TransactionRequest $request The incoming HTTP request.
      */
-    public function create(GatewayRequest $request) {
+    public function create(TransactionRequest $request) {
         try {
             $service = $this->getService($request->gateway);
             $request->validate($service::getCreateTransactionRules());
@@ -76,9 +76,9 @@ class TransactionController {
     /**
      * Handles the verification of an existing transaction via the specified gateway and unique ID.
      *
-     * @param GatewayRequest $request The incoming HTTP request.
+     * @param TransactionRequest $request The incoming HTTP request.
      */
-    public function verify(GatewayRequest $request, $unique_id) {
+    public function verify(TransactionRequest $request, $unique_id) {
         try {
             $service = $this->getService($request->gateway, $unique_id);
             $response = $service->verify();
