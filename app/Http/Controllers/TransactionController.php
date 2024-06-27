@@ -10,11 +10,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Class GatewayController
+ * Class TransactionController
  *
  * @package App\Http\Controllers
  */
-class GatewayController {
+class TransactionController {
     /**
      * The base namespace for transaction service classes.
      */
