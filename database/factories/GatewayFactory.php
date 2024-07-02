@@ -17,7 +17,7 @@ class GatewayFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'service_path' => 'App\\Services\\' . fake()->word() . '\\TransactionService',
             'api_key' => fake()->uuid(),
             'description' => fake()->realText(),
         ];

@@ -3,56 +3,45 @@
 namespace App\Http\Controllers;
 
 use Throwable;
+use App\Models\Gateway;
+use App\Models\Transaction;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use App\Services\TransactionService;
-use App\Http\Requests\TransactionRequest;
 use App\Services\TransactionServiceException;
+use App\Http\Requests\StoreTransactionRequest;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Class TransactionController
- *
- * @package App\Http\Controllers
- */
 class TransactionController {
-    /**
-     * The base namespace for transaction service classes.
-     */
-    protected const BASE_SERVICE_PATH = 'App\Services\\';
-
-    /**
-     * Constructs the full class name for the specified service.
-     *
-     * @param string $name The name of the service.
-     *
-     * @return string The fully qualified class name of the service.
-     */
-    protected function getServiceName(string $name): string {
-        return self::BASE_SERVICE_PATH . $name . '\TransactionService';
-    }
-
     /**
      * Resolves and retrieves an instance of the specified transaction service.
      *
-     * @param string $name The name of the service.
-     * @param string|null $uniqueId Optional unique identifier for the service instance.
+     * @param string $path The path to the service.
+     * @param array $params Optional parameters for the service instance.
      *
      * @return TransactionService The resolved instance of TransactionService.
      */
-    protected function getService(string $name, ?string $uniqueId = null): TransactionService {
-        return resolve($this->getServiceName($name), ['uniqueId' => $uniqueId]);
+    protected function getService(string $path, array $params = []): TransactionService {
+        return resolve($path, $params);
     }
 
     /**
-     * Handles the creation of a new transaction via the specified gateway.
-     *
-     * @param TransactionRequest $request The incoming HTTP request.
+     * Display a listing of the resource.
      */
-    public function create(TransactionRequest $request) {
+    public function index(): JsonResponse {
+        return response()->json(Transaction::all());
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreTransactionRequest $request) {
         try {
-            $service = $this->getService($request->gateway);
-            $request->validate($service::getCreateTransactionRules());
-            $response = $service::create($request->order_id, $request->amount);
+            $gateway = Gateway::find($request->gateway_id);
+            $service = $this->getService($gateway->service_path, ['gateway' => $gateway]);
+            $request->validate($service->getTransactionRules());
+            $response = $service->create($request->order_id, $request->amount);
 
             return response([
                 'success' => $response->getSuccess(),
@@ -74,13 +63,52 @@ class TransactionController {
     }
 
     /**
+     * Display the specified resource.
+     */
+    public function show(Transaction $transaction): JsonResponse {
+        return response()->json([
+            'success' => true,
+            'message' => 'تراکنش موردنظر پیدا شد.',
+            'data' => $transaction->getAttributes()
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Transaction $transaction): JsonResponse {
+        $transaction->update($request->all());
+        $transaction->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تراکنش موردنظر با موفقیت آپدیت شد.',
+            'data' => $transaction->getAttributes()
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Transaction $transaction): JsonResponse {
+        $transaction->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تراکنش موردنظر با موفقیت حذف شد.',
+        ], 204);
+    }
+
+    /**
      * Handles the verification of an existing transaction via the specified gateway and unique ID.
      *
-     * @param TransactionRequest $request The incoming HTTP request.
+     * @param Request $request The incoming HTTP request.
      */
-    public function verify(TransactionRequest $request, $unique_id) {
+    public function verify(Request $request, Transaction $transaction) {
         try {
-            $service = $this->getService($request->gateway, $unique_id);
+            $gateway = $transaction->gateway;
+            $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
+            $request->validate($service->getTransactionRules());
             $response = $service->verify();
 
             return response([

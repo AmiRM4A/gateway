@@ -15,7 +15,7 @@ class UpdateGatewayRequest extends FormRequest
     {
         return [
             'id' => ['required', 'int'],
-            'name' => ['string'],
+            'service_path' => ['string'],
             'api_key' => ['string', 'exists:gateways'],
             'description' => ['nullable', 'string']
         ];
@@ -31,7 +31,7 @@ class UpdateGatewayRequest extends FormRequest
         return [
             'id.required' => 'The gateway ID is required.',
             'id.int' => 'The gateway ID must be integer.',
-            'name.string' => 'The gateway name must be a string.',
+            'service_path.string' => 'The gateway name must be a string.',
             'api_key.required' => 'The API key is required.',
             'api_key.string' => 'The API key must be a string.',
             'api_key.exists' => 'The given API key does NOT exists!',

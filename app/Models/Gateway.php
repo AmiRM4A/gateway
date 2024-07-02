@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -9,12 +10,12 @@ class Gateway extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'name',
+        'service_path',
         'api_key',
         'description'
     ];
 
-    public static function generateUniqueId(): string {
-        return md5(uniqid('', true));
+    public function transactions(): HasMany {
+        return $this->hasMany(Transaction::class);
     }
 }

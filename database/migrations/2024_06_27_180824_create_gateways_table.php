@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('gateways', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->comment('نام درگاه');
+            $table->string('service_path')->comment('نام کلاس سرویس درگاه');
             $table->string('api_key')->unique()->comment('کلید API یکتا برای درگاه');
             $table->longText('description')->nullable()->comment('توضیحات درگاه');
             $table->timestamps();

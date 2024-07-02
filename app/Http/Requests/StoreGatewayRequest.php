@@ -14,7 +14,7 @@ class StoreGatewayRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string'],
+            'service_path' => ['required', 'string'],
             'api_key' => ['required', 'string', 'unique:gateways'],
             'description' => ['nullable', 'string']
         ];
@@ -28,8 +28,8 @@ class StoreGatewayRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'The API name is required.',
-            'name.string' => 'The API name must be a string.',
+            'service_path.required' => 'The API name is required.',
+            'service_path.string' => 'The API name must be a string.',
             'api_key.required' => 'The API key is required.',
             'api_key.string' => 'The API key must be a string.',
             'api_key.unique' => 'The API key already exists.',

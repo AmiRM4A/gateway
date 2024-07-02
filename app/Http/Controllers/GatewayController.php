@@ -23,7 +23,7 @@ class GatewayController {
     public function store(StoreGatewayRequest $request): JsonResponse {
         try {
             $gateway = Gateway::create([
-                'name' => $request->name,
+                'service_path' => $request->service_path,
                 'api_key' => $request->api_key,
                 'description' => $request->description,
             ]);
@@ -53,7 +53,7 @@ class GatewayController {
             'success' => true,
             'message' => 'درگاه موردنظر پیدا شد.',
             'data' => [
-                'name' => $gateway->name,
+                'service_path' => $gateway->service_path,
                 'api_key' => $gateway->api_key,
                 'description' => $gateway->description,
                 'added_at' => $gateway->created_at->format('Y-m-d H:i:s')
@@ -72,7 +72,7 @@ class GatewayController {
             'success' => true,
             'message' => 'درگاه موردنظر با موفقیت آپدیت شد.',
             'data' => [
-                'name' => $gateway->name,
+                'service_path' => $gateway->service_path,
                 'api_key' => $gateway->api_key,
                 'description' => $gateway->description,
                 'added_at' => $gateway->created_at->format('Y-m-d H:i:s'),
