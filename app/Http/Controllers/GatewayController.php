@@ -3,100 +3,103 @@
 namespace App\Http\Controllers;
 
 use Throwable;
-use App\Services\TransactionService;
-use App\Http\Requests\GatewayRequest;
-use App\Services\TransactionServiceException;
+use App\Models\Gateway;
+use Illuminate\Http\JsonResponse;
+use App\Http\Requests\StoreGatewayRequest;
+use App\Http\Requests\UpdateGatewayRequest;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use App\Http\Controllers\Exceptions\GatewayControllerException;
 
-/**
- * Class GatewayController
- *
- * @package App\Http\Controllers
- */
 class GatewayController {
     /**
-     * The base namespace for transaction service classes.
+     * Display a listing of the resource.
      */
-    protected const BASE_SERVICE_PATH = 'App\Services\\';
-
-    /**
-     * Constructs the full class name for the specified service.
-     *
-     * @param string $name The name of the service.
-     *
-     * @return string The fully qualified class name of the service.
-     */
-    protected function getServiceName(string $name): string {
-        return self::BASE_SERVICE_PATH . $name . '\TransactionService';
+    public function index(): JsonResponse {
+        return response()->json(Gateway::all(), Response::HTTP_OK);
     }
 
     /**
-     * Resolves and retrieves an instance of the specified transaction service.
-     *
-     * @param string $name The name of the service.
-     * @param string|null $uniqueId Optional unique identifier for the service instance.
-     *
-     * @return TransactionService The resolved instance of TransactionService.
+     * Store a newly created resource in storage.
      */
-    protected function getService(string $name, ?string $uniqueId = null): TransactionService {
-        return resolve($this->getServiceName($name), ['uniqueId' => $uniqueId]);
-    }
-
-    /**
-     * Handles the creation of a new transaction via the specified gateway.
-     *
-     * @param GatewayRequest $request The incoming HTTP request.
-     */
-    public function create(GatewayRequest $request) {
+    public function store(StoreGatewayRequest $request): JsonResponse {
         try {
-            $service = $this->getService($request->gateway);
-            $request->validate($service::getCreateTransactionRules());
-            $response = $service::create($request->order_id, $request->amount);
+            $gateway = Gateway::create([
+                'service_path' => $request->service_path,
+                'api_key' => $request->api_key,
+                'description' => $request->description,
+            ]);
 
-            return response([
-                'success' => $response->getSuccess(),
-                'message' => $response->getMessage(),
-                'unique_id' => $response->getUniqueId(),
-                'link' => $response->getLink(),
-                'data' => $response->getData()
-            ], $response->getStatus());
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $exceptionMessage = $e->getMessage();
+            if (!($gateway instanceof Gateway)) {
+                throw new GatewayControllerException('ساخت درگاه جدید با خطا مواجه شد!');
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ساخت درگاه جدید با موفقیت انجام شد.',
+                'gateway_id' => $gateway->id
+            ], Response::HTTP_CREATED);
         } catch (Throwable $e) {
-            $exceptionMessage = $e->getMessage();
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'ساخت درگاه جدید با خطا مواجه شد!'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        return response([
-            'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'ساخت تراکنش با خطا مواجه شد!',
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**
-     * Handles the verification of an existing transaction via the specified gateway and unique ID.
-     *
-     * @param GatewayRequest $request The incoming HTTP request.
+     * Display the specified resource.
      */
-    public function verify(GatewayRequest $request, $unique_id) {
+    public function show(Gateway $gateway): JsonResponse {
+        return response()->json([
+            'success' => true,
+            'message' => 'درگاه موردنظر پیدا شد.',
+            'data' => $gateway->getAttributes()
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateGatewayRequest $request, Gateway $gateway): JsonResponse {
         try {
-            $service = $this->getService($request->gateway, $unique_id);
-            $response = $service->verify();
+            $gateway->update($request->validated());
+            $gateway->refresh();
 
-            return response([
-                'success' => $response->getSuccess(),
-                'message' => $response->getMessage(),
-                'data' => $response->getData()
-            ], $response->getStatus());
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $exceptionMessage = $e->getMessage();
+            return response()->json([
+                'success' => true,
+                'message' => 'درگاه موردنظر با موفقیت آپدیت شد.',
+                'data' => [
+                    'service_path' => $gateway->service_path,
+                    'api_key' => $gateway->api_key,
+                    'description' => $gateway->description,
+                    'added_at' => $gateway->created_at->format('Y-m-d H:i:s'),
+                    'updated_at' => $gateway->updated_at->format('Y-m-d H:i:s')
+                ]
+            ], Response::HTTP_OK);
         } catch (Throwable $e) {
-            $exceptionMessage = $e->getMessage();
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'آپدیت درگاه موردنظر با خطا مواجه شد.'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
 
-        return response([
-            'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'تایید تراکنش با خطا مواجه شد!',
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Gateway $gateway): JsonResponse {
+        try {
+            $gateway->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'درگاه موردنظر با موفقیت حذف شد.',
+            ], Response::HTTP_NO_CONTENT);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'حذف درگاه موردنظر با خطا مواجه شد.'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

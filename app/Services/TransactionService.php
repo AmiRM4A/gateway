@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Gateway;
 use App\Models\Transaction;
 use Illuminate\Http\Response;
 use Illuminate\Http\Client\Response as HttpResponse;
@@ -10,7 +11,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 abstract class TransactionService implements TransactionServiceContract {
     protected Transaction $transaction;
 
-    public function __construct(?string $uniqueId = null) {
+    public function __construct(protected Gateway $gateway, ?string $uniqueId = null) {
         if (!is_null($uniqueId)) {
             $this->transaction = Transaction::whereUniqueId($uniqueId)->firstOr(function () {
                 throw new NotFoundHttpException('تراکنش یافت نشد!', code: Response::HTTP_NOT_FOUND);
@@ -22,7 +23,7 @@ abstract class TransactionService implements TransactionServiceContract {
 
     abstract protected static function getSandboxEndpoint(?string $method = null): string;
 
-    abstract protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse;
+    abstract protected function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse;
 
     protected static function getSuccessStatus(): array {
         return [
@@ -46,5 +47,5 @@ abstract class TransactionService implements TransactionServiceContract {
 
     abstract protected static function status(): array;
 
-    abstract protected static function getCreateTransactionRules(): array;
+    abstract protected function getTransactionRules(): array;
 }

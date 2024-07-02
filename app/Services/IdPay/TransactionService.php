@@ -15,7 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
  * TransactionService handles the interactions with the IDPay payment gateway.
  */
 class TransactionService extends BaseTransactionService {
-    protected const API_KEY       = '6a7f99eb-7c20-4412-a972-6dfb7cd253a4';
     protected const BASE_API_URL  = 'https://api.idpay.ir/v1.1';
     protected const CALL_BACK_URL = 'http://127.0.0.1:8000/api/verify';
     protected const SANDBOX_URL   = '';
@@ -61,9 +60,9 @@ class TransactionService extends BaseTransactionService {
      * @return HttpResponse The response from the POST request.
      * @throws ConnectionException If a connection error occurs.
      */
-    protected static function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse {
+    protected function post(string $method, array $data = [], bool $sand_box = false, ?array $headers = null): HttpResponse {
         $headers = $headers ?? [
-            'X-API-KEY' => self::API_KEY,
+            'X-API-KEY' => $this->gateway->api_key,
             'Content-Type' => 'application/json'
         ];
 
@@ -86,10 +85,10 @@ class TransactionService extends BaseTransactionService {
      * @return TransactionResponse The response from the transaction creation.
      * @throws TransactionServiceException If a connection error occurs.
      */
-    public static function create(string $orderId, int $amount): TransactionResponse {
+    public function create(string $orderId, int $amount): TransactionResponse {
         $uniqueId = Transaction::generateUniqueId();
         try {
-            $response = static::post('payment', [
+            $response = $this->post('payment', [
                 'order_id' => $orderId,
                 'amount' => $amount,
                 'callback' => static::CALL_BACK_URL . '/' . $uniqueId
@@ -104,6 +103,7 @@ class TransactionService extends BaseTransactionService {
 
         if ($statusCode === Response::HTTP_CREATED && !$errorCode) {
             Transaction::create([
+                'gateway_id' => $this->gateway->id,
                 'order_id' => $orderId,
                 'transaction_id' => $data['id'],
                 'amount' => $amount,
@@ -112,7 +112,9 @@ class TransactionService extends BaseTransactionService {
             ]);
 
             $data = array_merge($data, ['unique_id' => $uniqueId]);
-            return TransactionResponse::successful(Response::HTTP_CREATED, static::getStatus(201), $data);
+            return TransactionResponse::successful(Response::HTTP_CREATED, static::getStatus(201), $data)
+                ->link($data['link'])
+                ->uniqueId($uniqueId);
         }
 
         return TransactionResponse::failure($response->status(), static::getStatus(-1), $data);
@@ -129,12 +131,12 @@ class TransactionService extends BaseTransactionService {
             return TransactionResponse::failure(Response::HTTP_BAD_REQUEST, static::getStatus(102));
         }
 
-        if ($this->transaction->is_verified !== '0') {
-            return TransactionResponse::failure(Response::HTTP_NOT_ACCEPTABLE, static::getStatus(102));
+        if ($this->transaction->is_verified === '1') {
+            return TransactionResponse::successful(Response::HTTP_CONFLICT, static::getStatus(101));
         }
 
         try {
-            $response = static::post('payment/verify', [
+            $response = $this->post('payment/verify', [
                 'id' => $this->transaction->transaction_id,
                 'order_id' => $this->transaction->order_id
             ]);
@@ -163,13 +165,13 @@ class TransactionService extends BaseTransactionService {
     }
 
     /**
-     * Get the validation rules for creating a transaction.
+     * Get the validation rules for a transaction.
      *
      * @return array The validation rules.
      */
-    public static function getCreateTransactionRules(): array {
+    public function getTransactionRules(): array {
         return [
-            'order_id' => ['required', 'string', 'max:50'],
+            'order_id' => ['string'],
             'name' => ['string'],
             'phone' => ['string', 'max:11', 'regex:/^(98|0)?9\d{9}/'],
             'mail' => ['string', 'email', 'max:255'],
