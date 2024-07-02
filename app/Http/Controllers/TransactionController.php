@@ -30,20 +30,20 @@ class TransactionController {
      * Display a listing of the resource.
      */
     public function index(): JsonResponse {
-        return response()->json(Transaction::all());
+        return response()->json(Transaction::all(), Response::HTTP_OK);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTransactionRequest $request) {
+    public function store(StoreTransactionRequest $request): JsonResponse {
         try {
             $gateway = Gateway::find($request->gateway_id);
             $service = $this->getService($gateway->service_path, ['gateway' => $gateway]);
             $request->validate($service->getTransactionRules());
             $response = $service->create($request->order_id, $request->amount);
 
-            return response([
+            return response()->json([
                 'success' => $response->getSuccess(),
                 'message' => $response->getMessage(),
                 'unique_id' => $response->getUniqueId(),
@@ -56,9 +56,9 @@ class TransactionController {
             $exceptionMessage = $e->getMessage();
         }
 
-        return response([
+        return response()->json([
             'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'ساخت تراکنش با خطا مواجه شد!',
+            'message' => config('app.debug') ? $exceptionMessage : 'ساخت تراکنش با خطا مواجه شد.',
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
@@ -77,26 +77,40 @@ class TransactionController {
      * Update the specified resource in storage.
      */
     public function update(Request $request, Transaction $transaction): JsonResponse {
-        $transaction->update($request->all());
-        $transaction->refresh();
+        try {
+            $transaction->update($request->all());
+            $transaction->refresh();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تراکنش موردنظر با موفقیت آپدیت شد.',
-            'data' => $transaction->getAttributes()
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'تراکنش موردنظر با موفقیت آپدیت شد.',
+                'data' => $transaction->getAttributes()
+            ], Response::HTTP_OK);
+        }  catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'آپدیت تراکنش موردنظر با خطا مواجه شد.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Transaction $transaction): JsonResponse {
-        $transaction->delete();
+        try {
+            $transaction->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تراکنش موردنظر با موفقیت حذف شد.',
-        ], 204);
+            return response()->json([
+                'success' => true,
+                'message' => 'تراکنش موردنظر با موفقیت حذف شد.',
+            ], 204);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'حذف تراکنش موردنظر با خطا مواجه شد.',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -104,14 +118,14 @@ class TransactionController {
      *
      * @param Request $request The incoming HTTP request.
      */
-    public function verify(Request $request, Transaction $transaction) {
+    public function verify(Request $request, Transaction $transaction): JsonResponse {
         try {
             $gateway = $transaction->gateway;
             $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
             $request->validate($service->getTransactionRules());
             $response = $service->verify();
 
-            return response([
+            return response()->json([
                 'success' => $response->getSuccess(),
                 'message' => $response->getMessage(),
                 'data' => $response->getData()
@@ -122,9 +136,9 @@ class TransactionController {
             $exceptionMessage = $e->getMessage();
         }
 
-        return response([
+        return response()->json([
             'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'تایید تراکنش با خطا مواجه شد!',
+            'message' => config('app.debug') ? $exceptionMessage : 'تایید تراکنش با خطا مواجه شد.',
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
