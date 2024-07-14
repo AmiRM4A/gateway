@@ -2,26 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Throwable;
 use App\Models\Gateway;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Services\TransactionService;
-use App\Services\TransactionServiceException;
 use App\Http\Requests\StoreTransactionRequest;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class TransactionController {
-    /**
-     * Resolves and retrieves an instance of the specified transaction service.
-     *
-     * @param string $path The path to the service.
-     * @param array $params Optional parameters for the service instance.
-     *
-     * @return TransactionService The resolved instance of TransactionService.
-     */
     protected function getService(string $path, array $params = []): TransactionService {
         return resolve($path, $params);
     }
@@ -29,116 +17,83 @@ class TransactionController {
     /**
      * Display a listing of the resource.
      */
-    public function index(): JsonResponse {
-        return response()->json(Transaction::all(), Response::HTTP_OK);
+    public function index() {
+        return response()->json([
+            'success' => true,
+            'data' => Transaction::all()->load('gateway')
+        ], Response::HTTP_OK);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTransactionRequest $request): JsonResponse {
-        try {
-            $gateway = Gateway::find($request->gateway_id);
-            $service = $this->getService($gateway->service_path, ['gateway' => $gateway]);
-            $request->validate($service->getTransactionRules());
-            $response = $service->create($request->order_id, $request->amount);
+    public function store(StoreTransactionRequest $request) {
+        $gateway = Gateway::find($request->gateway_id);
+        $service = $this->getService($gateway->service_path, ['gateway' => $gateway]);
+        $request->validate($service->getTransactionRules());
 
-            return response()->json([
-                'success' => $response->getSuccess(),
-                'message' => $response->getMessage(),
-                'unique_id' => $response->getUniqueId(),
-                'link' => $response->getLink(),
-                'data' => $response->getData()
-            ], $response->getStatus());
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $exceptionMessage = $e->getMessage();
-        } catch (Throwable $e) {
-            $exceptionMessage = $e->getMessage();
-        }
+        $response = $service->create($request->order_id, $request->amount);
 
         return response()->json([
-            'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'ساخت تراکنش با خطا مواجه شد.',
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            'success' => $response->getSuccess(),
+            'message' => $response->getMessage(),
+            'unique_id' => $response->getUniqueId(),
+            'link' => $response->getLink(),
+            'data' => $response->getData()
+        ], $response->getStatus());
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Transaction $transaction): JsonResponse {
+    public function show(Transaction $transaction) {
         return response()->json([
             'success' => true,
-            'message' => 'تراکنش موردنظر پیدا شد.',
-            'data' => $transaction->getAttributes()
+            'data' => $transaction->load('gateway')
         ], Response::HTTP_OK);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Transaction $transaction): JsonResponse {
-        try {
-            $transaction->update($request->all());
-            $transaction->refresh();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تراکنش موردنظر با موفقیت آپدیت شد.',
-                'data' => $transaction->getAttributes()
-            ], Response::HTTP_OK);
-        }  catch (Throwable $e) {
+    public function update(Request $request, Transaction $transaction) {
+        if (empty($request->all())){
             return response()->json([
                 'success' => false,
-                'message' => config('app.debug') ? $e->getMessage() : 'آپدیت تراکنش موردنظر با خطا مواجه شد.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'لطفا فیلد موردنظر برای آپدیت را وارد کنید'
+            ], Response::HTTP_BAD_REQUEST);
         }
+
+        $transaction->update($request->all());
+
+        return response()->json([
+            'success' => true
+        ], Response::HTTP_OK);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Transaction $transaction): JsonResponse {
-        try {
-            $transaction->delete();
+    public function destroy(Transaction $transaction) {
+        $transaction->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تراکنش موردنظر با موفقیت حذف شد.',
-            ], 204);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => config('app.debug') ? $e->getMessage() : 'حذف تراکنش موردنظر با خطا مواجه شد.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return response()->json([
+            'success' => true
+        ], Response::HTTP_NO_CONTENT);
     }
 
     /**
      * Handles the verification of an existing transaction via the specified gateway and unique ID.
-     *
-     * @param Request $request The incoming HTTP request.
      */
-    public function verify(Request $request, Transaction $transaction): JsonResponse {
-        try {
-            $gateway = $transaction->gateway;
-            $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
-            $request->validate($service->getTransactionRules());
-            $response = $service->verify();
-
-            return response()->json([
-                'success' => $response->getSuccess(),
-                'message' => $response->getMessage(),
-                'data' => $response->getData()
-            ], $response->getStatus());
-        } catch (NotFoundHttpException|TransactionServiceException $e) {
-            $exceptionMessage = $e->getMessage();
-        } catch (Throwable $e) {
-            $exceptionMessage = $e->getMessage();
-        }
+    public function verify(Transaction $transaction) {
+        $gateway = $transaction->gateway;
+        $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
+        $response = $service->verify();
 
         return response()->json([
-            'success' => false,
-            'message' => config('app.debug') ? $exceptionMessage : 'تایید تراکنش با خطا مواجه شد.',
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            'success' => $response->getSuccess(),
+            'message' => $response->getMessage(),
+            'data' => $response->getData()
+        ], $response->getStatus());
     }
 }

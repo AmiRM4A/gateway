@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Gateway extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'service_path',
         'api_key',

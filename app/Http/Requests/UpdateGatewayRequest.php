@@ -14,7 +14,6 @@ class UpdateGatewayRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => ['required', 'int'],
             'service_path' => ['string'],
             'api_key' => ['string', 'exists:gateways'],
             'description' => ['nullable', 'string']
@@ -29,8 +28,6 @@ class UpdateGatewayRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id.required' => 'The gateway ID is required.',
-            'id.int' => 'The gateway ID must be integer.',
             'service_path.string' => 'The gateway name must be a string.',
             'api_key.required' => 'The API key is required.',
             'api_key.string' => 'The API key must be a string.',
