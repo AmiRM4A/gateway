@@ -15,16 +15,18 @@ class Transaction extends Model
         'updated_at'
     ];
 
+    protected $casts = [
+        'order_id' => 'string',
+        'gateway_id' => 'int',
+        'status_code' => 'int'
+    ];
+
     public function getRouteKeyName(): string {
         return 'unique_id';
     }
 
     public function gateway(): BelongsTo {
         return $this->belongsTo(Gateway::class);
-    }
-
-    public static function isVerified($uniqueId): bool {
-        return static::where('is_verified', 1)->exists($uniqueId);
     }
 
     public static function generateUniqueId(): string {

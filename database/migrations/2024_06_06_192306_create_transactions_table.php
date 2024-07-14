@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('order_id', 50)->unique()->comment('شماره سفارش پذیرنده');
             $table->string('transaction_id',128)->unique()->comment('کلید منحصر بفرد تراکنش');
-            $table->unsignedBigInteger('amount')->comment('مبلغ مورد نظر ترانکش برای پرداخت');
+            $table->float('amount')->comment('مبلغ مورد نظر ترانکش برای پرداخت');
             $table->string('link', 128)->unique()->comment('لینک پرداخت برای انتقال خریدار به درگاه پرداخت');
             $table->timestamps();
         });

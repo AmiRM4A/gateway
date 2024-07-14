@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->foreignId('gateway_id')->after('transaction_id')->comment('آیدی درگاه')->constrained();
+            $table->foreignId('gateway_id')->after('transaction_id')->nullable()->comment('آیدی درگاه')->constrained()->nullOnDelete();
         });
     }
 
