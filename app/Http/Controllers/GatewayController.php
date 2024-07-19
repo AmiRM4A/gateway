@@ -71,6 +71,6 @@ class GatewayController {
 
         return response()->json([
             'success' => true
-        ], Response::HTTP_NO_CONTENT);
+        ], Response::HTTP_OK);
     }
 }
