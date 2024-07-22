@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\v1;
 
 use App\Models\Gateway;
+use App\Exceptions\GatewayException;
 use App\Http\Requests\StoreGatewayRequest;
 use App\Http\Requests\UpdateGatewayRequest;
 use Symfony\Component\HttpFoundation\Response;
