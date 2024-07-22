@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\v1;
 use App\Models\Gateway;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Services\TransactionService;
 use App\Http\Requests\StoreTransactionRequest;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,13 +33,6 @@ class TransactionController {
         $request->validate($service->getTransactionRules());
 
         $response = $service->create($request->order_id, $request->amount);
-
-		Log::info('TRANSACTION CREATION =>
-				| Success: ' . $response->getSuccess() . '
-				| Status: ' . $response->getStatus() . '
-				| Message: ' . $response->getMessage() . '
-				| Data: ' . $response->getData() . '
-				| Request Params: ' . json_encode($request->all()));
 
         return response()->json([
             'success' => $response->getSuccess(),
@@ -96,14 +88,8 @@ class TransactionController {
     public function verify(Transaction $transaction) {
         $gateway = $transaction->gateway;
         $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
-        $response = $service->verify();
 
-		Log::info('TRANSACTION VERIFICATION =>
-				| Transaction (Unique Id): ' . $transaction->unique_id . '
-				| Success: ' . $response->getSuccess() . '
-				| Status: ' . $response->getStatus() . '
-				| Message: ' . $response->getMessage() . '
-				| Data: ' . json_encode($response->getData()));
+        $response = $service->verify();
 
         return response()->json([
             'success' => $response->getSuccess(),
