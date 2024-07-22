@@ -88,6 +88,7 @@ class TransactionController {
     public function verify(Transaction $transaction) {
         $gateway = $transaction->gateway;
         $service = $this->getService($gateway->service_path, ['uniqueId' => $transaction->unique_id]);
+
         $response = $service->verify();
 
         return response()->json([
