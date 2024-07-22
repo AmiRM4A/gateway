@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\v1;
 
 use App\Models\Gateway;
 use App\Models\Transaction;
@@ -79,7 +79,7 @@ class TransactionController {
 
         return response()->json([
             'success' => true
-        ], Response::HTTP_NO_CONTENT);
+        ], Response::HTTP_OK);
     }
 
     /**
