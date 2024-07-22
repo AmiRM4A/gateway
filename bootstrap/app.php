@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (NotFoundHttpException $e) {
-            Log::error('NotFoundException => Message: ' . $e->getMessage() . ' | Code: ' . $e->getCode() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
+            Log::error(formatExceptionMessage($e));
 
             return response()->json([
                 'success' => false,
@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (Throwable $e) {
-            Log::error('Throwable => Message: ' . $e->getMessage() . ' | Code: ' . $e->getCode() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
+            Log::error(formatExceptionMessage($e));
 
             return response()->json([
                 'success' => false,

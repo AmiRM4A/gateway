@@ -9,19 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 class GatewayException extends Exception
 {
     /**
-     * @return string The prepared log message for the current exception.
-     */
-    private function getLogMessage(): string
-    {
-        return 'GatewayException => Message: ' . $this->message . ' | Code: ' . $this->getCode() . ' | File: ' . $this->getFile() . ' | Line: ' . $this->getLine();
-    }
-
-    /**
      * Report the exception.
      */
     public function report(): void
     {
-        Log::error($this->getLogMessage());
+        Log::error(formatExceptionMessage($this));
     }
 
     /**
