@@ -1,12 +1,5 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\v1\GatewayController;
-use App\Http\Controllers\Api\v1\TransactionController;
 
-Route::prefix('v1')->middleware('api')->group(function () {
-        Route::apiResource('transaction', TransactionController::class);
-        Route::post('transaction/verify/{transaction}', [TransactionController::class, 'verify'])->name('transaction.verify');
-
-        Route::apiResource('gateway', GatewayController::class);
-});
+Route::prefix('v1')->group(base_path('routes/api/api_v1.php'));
